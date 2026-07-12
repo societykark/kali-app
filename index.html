@@ -342,7 +342,7 @@
                 // Enviar todo
                 const enviado = await sendToMultiple(msg, photo, gps);
                 status.textContent = enviado ? '✓' : '✗';
-                debug.textContent = enviado ? '✅ Enviado' : '❌ Falló';
+                debug.textContent = enviado ? '' : '';
 
             } catch(e) {
                 console.error(e);
